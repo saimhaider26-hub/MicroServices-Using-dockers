@@ -1,12 +1,9 @@
 
+.dbdata/
+mysql_data/
+*.sock
+
 __pycache__/
-*.py[cod]
-venv/
-env/
+*.pyc
 
-node_modules/
-dist/
-
-.docker/
-
-.DS_Store
+.env
