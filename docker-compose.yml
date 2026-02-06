@@ -40,10 +40,15 @@ services:
     restart: always
     environment:
       MYSQL_DATABASE: main_db
-      MYSQL_USER: root
-      MYSQL_PASSWORD: root
       MYSQL_ROOT_PASSWORD: root
     volumes:
       - ./main/.dbdata:/var/lib/mysql 
     ports:
       - 33067:3306
+  
+  queue:
+    image: rabbitmq:3-management
+    container_name: queue
+    ports:
+      - 5672:5672
+      - 15672:15672
