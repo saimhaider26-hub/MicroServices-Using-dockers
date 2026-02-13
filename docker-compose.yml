@@ -1,54 +1,79 @@
-version: '3.9'
 services:
+  queue:
+    image: rabbitmq:3-management-alpine
+    container_name: queue
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  db:
+    image: mysql:8.0
+    container_name: db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: admin
+    ports:
+      - "33066:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  db_main:
+    image: mysql:8.0
+    container_name: db_main
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: main
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   admin:
     build: ./admin
-    command: python manage.py runserver 0.0.0.0:8000
+    container_name: admin
     volumes:
       - ./admin:/app
     ports:
       - "8000:8000"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+      queue:
+        condition: service_healthy
+    command: python manage.py runserver 0.0.0.0:8000
 
-  db:
-    image: mysql:8.0
-    restart: always
-    environment:
-      MYSQL_DATABASE: admin
-      MYSQL_USER: root
-      MYSQL_PASSWORD: root
-      MYSQL_ROOT_PASSWORD: root
-    volumes:
-      - .dbdata:/var/lib/mysql
-    ports:
-      - 33066:3306
-
- 
   main:
     build: ./main
-    command: python main.py  
+    container_name: main
     volumes:
       - ./main:/app
     ports:
-      - "8001:5000"
+      - "5000:5000"
     depends_on:
-      - db_main
+      db_main:
+        condition: service_healthy
+      queue:
+        condition: service_healthy
 
-  
-  db_main:
-    image: mysql:8.0
-    restart: always
-    environment:
-      MYSQL_DATABASE: main_db
-      MYSQL_ROOT_PASSWORD: root
+  consumer:
+    build: ./main
+    container_name: consumer
     volumes:
-      - ./main/.dbdata:/var/lib/mysql 
-    ports:
-      - 33067:3306
-  
-  queue:
-    image: rabbitmq:3-management
-    container_name: queue
-    ports:
-      - 5672:5672
-      - 15672:15672
+      - ./main:/app
+    depends_on:
+      queue:
+        condition: service_healthy
+      db_main:
+        condition: service_healthy
+    command: python consumer.py

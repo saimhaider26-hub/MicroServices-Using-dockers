@@ -1,34 +1,24 @@
-import pika
+import pika, json
 
-def publish():
-    print('DEBUG: Starting publish function...')
-    
+def publish(method, body):
     params = pika.URLParameters('amqp://guest:guest@queue:5672/')
-    print('DEBUG: URL parameters set.')
 
-   
     try:
+       
         connection = pika.BlockingConnection(params)
-        print('DEBUG: Connection successful!')
-    except Exception as e:
-        print(f'DEBUG: CRASHED during connection: {e}')
-        return
-
-    try:
         channel = connection.channel()
-        print('DEBUG: Channel created.')
-    except Exception as e:
-        print(f'DEBUG: CRASHED during channel creation: {e}')
-        return
+        
+        properties = pika.BasicProperties(content_type=method)
+        
+        channel.basic_publish(
+            exchange='',
+            routing_key='main',
+            body=json.dumps(body),
+            properties=properties
+        )
+        
+        print(f'DEBUG: Sent {method} to main queue')
+        connection.close()
 
-   
-    try:
-        channel.basic_publish(exchange='', routing_key='main', body='hello')
-        print('DEBUG: Message published!')
     except Exception as e:
-        print(f'DEBUG: CRASHED during publish: {e}')
-        return
-    
-
-    connection.close()
-    print('DEBUG: Connection closed. Done.')
+        print(f'DEBUG: Producer failed: {e}')
