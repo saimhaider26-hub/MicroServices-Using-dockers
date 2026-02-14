@@ -66,14 +66,26 @@ services:
       queue:
         condition: service_healthy
 
-  consumer:
+  main_consumer:
     build: ./main
-    container_name: consumer
+    container_name: main_consumer
     volumes:
       - ./main:/app
     depends_on:
       queue:
         condition: service_healthy
       db_main:
+        condition: service_healthy
+    command: python consumer.py
+
+  admin_consumer:
+    build: ./admin
+    container_name: admin_consumer
+    volumes:
+      - ./admin:/app
+    depends_on:
+      queue:
+        condition: service_healthy
+      db:
         condition: service_healthy
     command: python consumer.py

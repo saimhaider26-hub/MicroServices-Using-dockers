@@ -4,6 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import UniqueConstraint
 from dataclasses import dataclass
 import requests
+from producer import publish
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = 'mysql://root:root@db_main/main'
@@ -42,7 +43,7 @@ def index():
 def like(id):
     try:
         req = requests.get('http://admin:8000/api/user')
-        req_json = req.json() # Use a different name so you don't overwrite the 'json' module
+        req_json = req.json() 
     except Exception:
         return jsonify({"message": "Admin service is unreachable or sent invalid data"}), 400
 
@@ -50,9 +51,8 @@ def like(id):
         productUser = ProductUser(user_id=req_json['id'], product_id=id)
         db.session.add(productUser)
         db.session.commit()
-        
-        # This is where the guy in the video publishes an event to RabbitMQ
-        # publish('product_liked', id) 
+        publish('product_liked', id)
+      
     except:
         abort(400, 'You already liked this product')
 
